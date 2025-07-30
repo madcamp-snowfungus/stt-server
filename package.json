@@ -4,15 +4,22 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "stt": "node stt.js",
+    "game": "node game.js",
+    "dev": "concurrently \"npm run stt\" \"npm run game\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@google-cloud/speech": "^7.2.0",
+    "@supabase/supabase-js": "^2.53.0",
     "dotenv": "^17.2.1",
     "expree": "^2.1.0",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
   }
 }
