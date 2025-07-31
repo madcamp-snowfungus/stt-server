@@ -5,6 +5,7 @@ const http = require('http');
 // const fs = require('fs');
 
 const server = http.createServer();
+const wss = new WebSocket.Server({ server });
 // const server = https.createServer({
 //   cert: fs.readFileSync('/etc/letsencrypt/live/funguess.duckdns.org/fullchain.pem'),
 //   key: fs.readFileSync('/etc/letsencrypt/live/funguess.duckdns.org/privkey.pem')
