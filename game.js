@@ -23,7 +23,7 @@ function startTurn(roomId) {
   if (!room) return;
 
   clearInterval(room.interval); // 이전 타이머 정지
-  room.timer = 15;
+  room.timer = 10;
 
   console.log(`🎯 Starting turn ${room.turn} for room ${roomId}`);
 
@@ -43,7 +43,7 @@ function startTurn(roomId) {
         
         console.log(`⏰ Timer expired for turn ${room.turn} in room ${roomId}`);
         
-        // 15초가 지났을 때 turnEnd 이벤트를 브로드캐스트 (handleTurnEnd 호출)
+        // 10초가 지났을 때 turnEnd 이벤트를 브로드캐스트 (handleTurnEnd 호출)
         broadcastToRoom(roomId, { type: 'turnEnd', timerExpired: true, turn: room.turn });
         
         room.turn += 1;
@@ -90,7 +90,7 @@ wss.on('connection', (ws) => {
           rooms[roomId] = {
             clients: new Set(),
             turn: 0,
-            timer: 15,
+            timer: 10,
             interval: null,
             totalTurns: data.totalTurns || 8,
             gameId: data.gameId,
