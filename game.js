@@ -1,18 +1,9 @@
 // server/game.js
 const WebSocket = require('ws');
 const http = require('http');
-// const https = require('https');
-// const fs = require('fs');
 
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
-// const server = https.createServer({
-//   cert: fs.readFileSync('/etc/letsencrypt/live/funguess.duckdns.org/fullchain.pem'),
-//   key: fs.readFileSync('/etc/letsencrypt/live/funguess.duckdns.org/privkey.pem')
-// });
-
-// const server = http.createServer();
-// const wss = new WebSocket.Server({ server });
 
 const rooms = {}; // { [roomId]: { clients: Set, turn: number, timer: number, interval: Timer, totalTurns: number, gameId: number } }
 
@@ -38,34 +29,8 @@ function startTurn(roomId) {
 
   broadcastToRoom(roomId, { type: 'turn', turn: room.turn });
   
-  // AI 분석 모달 시간(5초) 후에 타이머 시작
-  setTimeout(() => {
-    broadcastToRoom(roomId, { type: 'timer', timer: room.timer });
-
-    room.interval = setInterval(() => {
-      room.timer -= 1;
-
-      broadcastToRoom(roomId, { type: 'timer', timer: room.timer });
-
-      if (room.timer <= 0) {
-        clearInterval(room.interval);
-        
-        console.log(`⏰ Timer expired for turn ${room.turn} in room ${roomId}`);
-        
-        // 10초가 지났을 때 turnEnd 이벤트를 브로드캐스트 (handleTurnEnd 호출)
-        broadcastToRoom(roomId, { type: 'turnEnd', timerExpired: true, turn: room.turn });
-        
-        room.turn += 1;
-
-        if (room.turn >= room.totalTurns) {
-          console.log(`🏁 Game ended after ${room.turn} turns`);
-          broadcastToRoom(roomId, { type: 'gameEnd' });
-        } else {
-          startTurn(roomId);
-        }
-      }
-    }, 1000);
-  }, 5000); // 5초 딜레이 (AI 분석 모달 시간)
+  // 타이머는 클라이언트의 requestTimer 요청을 기다림
+  // AI 모달이 완전히 닫힌 후에 타이머가 시작됨
 }
 
 wss.on('connection', (ws) => {
@@ -114,6 +79,38 @@ wss.on('connection', (ws) => {
         if (rooms[roomId].clients.size === 1 && !rooms[roomId].started) {
           rooms[roomId].started = true;
           startTurn(roomId);
+          
+          // 첫 번째 턴은 AI 모달이 없으므로 바로 타이머 시작
+          setTimeout(() => {
+            const room = rooms[roomId];
+            if (room && room.turn === 0) {
+              console.log(`🚀 First turn timer start for room ${roomId}`);
+              broadcastToRoom(roomId, { type: 'timer', timer: room.timer });
+
+              room.interval = setInterval(() => {
+                room.timer -= 1;
+
+                broadcastToRoom(roomId, { type: 'timer', timer: room.timer });
+
+                if (room.timer <= 0) {
+                  clearInterval(room.interval);
+                  
+                  console.log(`⏰ Timer expired for turn ${room.turn} in room ${roomId}`);
+                  
+                  broadcastToRoom(roomId, { type: 'turnEnd', timerExpired: true, turn: room.turn });
+                  
+                  room.turn += 1;
+
+                  if (room.turn >= room.totalTurns) {
+                    console.log(`🏁 Game ended after ${room.turn} turns`);
+                    broadcastToRoom(roomId, { type: 'gameEnd' });
+                  } else {
+                    startTurn(roomId);
+                  }
+                }
+              }, 1000);
+            }
+          }, 2000); // 2초 후 타이머 시작
         }
       }
 
@@ -130,6 +127,40 @@ wss.on('connection', (ws) => {
             analysisData: data.analysisData 
           });
         }
+      }
+
+      if (data.type === 'requestTimer') {
+        const room = rooms[data.roomId];
+        if (!room) return;
+
+        console.log(`🚀 Timer start requested for room ${data.roomId}, turn ${room.turn}`);
+        
+        // 타이머 즉시 시작
+        broadcastToRoom(roomId, { type: 'timer', timer: room.timer });
+
+        room.interval = setInterval(() => {
+          room.timer -= 1;
+
+          broadcastToRoom(roomId, { type: 'timer', timer: room.timer });
+
+          if (room.timer <= 0) {
+            clearInterval(room.interval);
+            
+            console.log(`⏰ Timer expired for turn ${room.turn} in room ${roomId}`);
+            
+            // 10초가 지났을 때 turnEnd 이벤트를 브로드캐스트 (handleTurnEnd 호출)
+            broadcastToRoom(roomId, { type: 'turnEnd', timerExpired: true, turn: room.turn });
+            
+            room.turn += 1;
+
+            if (room.turn >= room.totalTurns) {
+              console.log(`🏁 Game ended after ${room.turn} turns`);
+              broadcastToRoom(roomId, { type: 'gameEnd' });
+            } else {
+              startTurn(roomId);
+            }
+          }
+        }, 1000);
       }
 
     } catch (e) {
